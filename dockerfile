@@ -27,15 +27,14 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
-# Install Tailwind CSS v3 (downgrading from v4 to avoid compatibility issues)
+# Fix Tailwind CSS issues - downgrade to v3
 RUN npm uninstall tailwindcss @tailwindcss/postcss \
     && npm install tailwindcss@3 postcss autoprefixer
 
-# Build the application
-RUN npm run build
+# Update PostCSS config for compatibility
+RUN if [ -f postcss.config.js ]; then \
+    sed -i 's/@tailwindcss\/postcss/tailwindcss/g' postcss.config.js; \
+    fi
 
-# Expose port
-EXPOSE 3000
-
-# Start the application in development mode
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Commands for testing and linting
+CMD ["npm", "run", "dev"]
