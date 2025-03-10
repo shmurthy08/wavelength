@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 60" width="280" height="60">
+  <!-- Background Gradient (subtle) -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main Wave Group -->
+  <g transform="translate(0, 30)">
+    <!-- Primary Wave - represents the core wavelength concept -->
+    <path d="M10,0 C15,-10 20,-12 25,-6 C30,0 35,6 40,0 C45,-6 50,-12 55,-6 C60,0 65,6 70,0 C75,-6 80,-12 85,-6 C90,0 95,6 100,0" 
+          fill="none" 
+          stroke="url(#logoGradient)" 
+          stroke-width="3" 
+          stroke-linecap="round" />
+    
+    <!-- Secondary Wave - represents community and connection -->
+    <path d="M10,0 C15,8 20,10 25,5 C30,0 35,-5 40,0 C45,5 50,10 55,5 C60,0 65,-5 70,0 C75,5 80,10 85,5 C90,0 95,-5 100,0" 
+          fill="none" 
+          stroke="url(#logoGradient)" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-opacity="0.7" />
+  </g>
+  
+  <!-- Text -->
+  <g transform="translate(115, 36)">
+    <text font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#4f46e5">
+      wavelength
+    </text>
+  </g>
+  
+  <!-- Connector Dots - representing connection points -->
+  <circle cx="40" cy="30" r="2.5" fill="#a855f7" />
+  <circle cx="70" cy="30" r="2.5" fill="#7c3aed" />
+  <circle cx="100" cy="30" r="2.5" fill="#4f46e5" />
+</svg>

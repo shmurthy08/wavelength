@@ -20,7 +20,12 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo and brand name */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center space-x-2">
+              <img 
+                src="/wavelength-logo.svg" 
+                alt="Wavelength" 
+                className="h-8 w-8"
+              />
               <span className="text-indigo-600 font-bold text-xl">
                 <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
                   Wavelength

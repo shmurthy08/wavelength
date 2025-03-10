@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useWavelength } from '../context/WavelengthContext';
 import { useWavelengthPosts } from '../hooks/useSupabaseQuery';
@@ -11,7 +10,6 @@ export default function WavelengthView() {
   const { wavelengthId } = useParams();
   const { user } = useAuth();
   const { tuneIn, tuneOut } = useWavelength();
-  const queryClient = useQueryClient();
   
   const [wavelength, setWavelength] = useState(null);
   const [users, setUsers] = useState([]);
@@ -26,6 +24,60 @@ export default function WavelengthView() {
     refetch: refetchPosts 
   } = useWavelengthPosts(wavelengthId);
   
+  const fetchActiveUsers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_wavelengths')
+        .select('profiles:user_id(id, username, avatar_url)')
+        .eq('wavelength_id', wavelengthId)
+        .eq('active', true)
+        .limit(50);
+        
+      if (error) throw error;
+      setUsers(data?.map(item => item.profiles) || []);
+    } catch (error) {
+      console.error('Error fetching active users:', error);
+    }
+  }, [wavelengthId]);
+
+  const fetchWavelengthData = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('wavelengths')
+        .select('*')
+        .eq('id', wavelengthId)
+        .single();
+        
+      if (error) throw error;
+      setWavelength(data);
+      
+      await fetchActiveUsers();
+    } catch (error) {
+      console.error('Error fetching wavelength:', error);
+    }
+  }, [wavelengthId, fetchActiveUsers]);
+
+  const checkIfTunedIn = useCallback(async () => {
+    if (!user) {
+      setIsTunedIn(false);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_wavelengths')
+        .select('active')
+        .eq('user_id', user.id)
+        .eq('wavelength_id', wavelengthId)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') throw error;
+      setIsTunedIn(data?.active || false);
+    } catch (error) {
+      console.error('Error checking tune status:', error);
+    }
+  }, [user, wavelengthId]);
+
   useEffect(() => {
     fetchWavelengthData();
     checkIfTunedIn();
@@ -65,61 +117,7 @@ export default function WavelengthView() {
       supabase.removeChannel(wavelengthSubscription);
       supabase.removeChannel(usersSubscription);
     };
-  }, [wavelengthId, user]);
-
-  const fetchWavelengthData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('wavelengths')
-        .select('*')
-        .eq('id', wavelengthId)
-        .single();
-        
-      if (error) throw error;
-      setWavelength(data);
-      
-      await fetchActiveUsers();
-    } catch (error) {
-      console.error('Error fetching wavelength:', error);
-    }
-  };
-
-  const fetchActiveUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_wavelengths')
-        .select('profiles:user_id(id, username, avatar_url)')
-        .eq('wavelength_id', wavelengthId)
-        .eq('active', true)
-        .limit(50);
-        
-      if (error) throw error;
-      setUsers(data?.map(item => item.profiles) || []);
-    } catch (error) {
-      console.error('Error fetching active users:', error);
-    }
-  };
-
-  const checkIfTunedIn = async () => {
-    if (!user) {
-      setIsTunedIn(false);
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('user_wavelengths')
-        .select('active')
-        .eq('user_id', user.id)
-        .eq('wavelength_id', wavelengthId)
-        .single();
-        
-      if (error && error.code !== 'PGRST116') throw error;
-      setIsTunedIn(data?.active || false);
-    } catch (error) {
-      console.error('Error checking tune status:', error);
-    }
-  };
+  }, [wavelengthId, user, fetchWavelengthData, checkIfTunedIn, fetchActiveUsers]);
 
   const handleTuneToggle = async () => {
     if (!user) return;
@@ -168,22 +166,24 @@ export default function WavelengthView() {
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', postId);
-        
-      if (error) throw error;
-      
-      // Remove the deleted post from the cache
-      queryClient.setQueryData(['wavelength-posts', wavelengthId], (old) => 
-        old?.filter(post => post.id !== postId) || []
-      );
-    } catch (error) {
-      console.error('Error deleting post:', error);
-    }
+  const formatTimeAgo = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    
+    const diffSecs = Math.floor(diffMs / 1000);
+    if (diffSecs < 60) return `${diffSecs}s ago`;
+    
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString();
   };
 
   if (postsLoading) {
