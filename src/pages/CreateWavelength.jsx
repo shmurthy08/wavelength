@@ -65,7 +65,9 @@ export default function CreateWavelength() {
       
       const { data, error } = await createWavelength(wavelengthData);
       
-      if (error) throw new Error(error);
+      if (error || !data || !data.id) {
+        throw new Error(error || 'Failed to create wavelength.');
+      }
       
       // Navigate to the newly created wavelength
       navigate(`/wavelength/${data.id}`);
@@ -106,7 +108,7 @@ export default function CreateWavelength() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 maxLength={50}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="e.g. Morning Coffee, Weekend Hiking"
               />
             </div>
@@ -122,7 +124,7 @@ export default function CreateWavelength() {
                 required
                 rows={4}
                 maxLength={200}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Describe what this wavelength is about..."
               />
               <p className="mt-1 text-sm text-gray-500">
@@ -139,7 +141,7 @@ export default function CreateWavelength() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="" disabled>Select a category</option>
                 {categoryOptions.map((cat) => (
@@ -156,7 +158,7 @@ export default function CreateWavelength() {
                 id="duration"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {durationOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -181,7 +183,7 @@ export default function CreateWavelength() {
                 min="0.1"
                 max="1"
                 step="0.1"
-                className="w-full"
+                className="w-full dark:bg-gray-800 dark:text-white"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Subtle</span>

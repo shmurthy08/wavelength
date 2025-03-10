@@ -143,7 +143,8 @@ export function WavelengthProvider({ children }) {
 
   // Create a new wavelength
   const createWavelength = async (wavelengthData) => {
-    if (!user) return { error: 'User not authenticated' };
+    // Ensure user and user.id exist
+    if (!user || !user.id) return { error: 'User not authenticated' };
     
     try {
       const { data, error } = await supabase

@@ -18,6 +18,19 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure full viewport usage and proper text contrast */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+body {
+  color: #000;
+  background-color: #fff;
+}
+
 /* You can add your custom styles below */
 
 a {
@@ -50,6 +63,7 @@ button {
   font-weight: 500;
   font-family: inherit;
   background-color: #1a1a1a;
+  color: #fff; /* Ensures text is white on black buttons */
   cursor: pointer;
   transition: border-color 0.25s;
 }

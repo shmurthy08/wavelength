@@ -127,7 +127,7 @@ export default function Profile() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               
@@ -139,7 +139,7 @@ export default function Profile() {
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               
