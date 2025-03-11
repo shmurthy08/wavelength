@@ -13,7 +13,7 @@ language = "Javascript"
 
 
 ## Optional: Connect kwaak to github to create PRs, search code, and automatically push to a  remote
-github_api_key = "env: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"
+github_api_key = "env:GITHUB_TOKEN"
 
 
 ## Optional: Connect kwaak to tavily to enable it to search the web
