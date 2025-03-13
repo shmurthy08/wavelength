@@ -9,6 +9,8 @@ export function WavelengthProvider({ children }) {
   const [activeWavelengths, setActiveWavelengths] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [wavelength, setWavelength] = useState(null);
+  const [posts, setPosts] = useState([]);
 
   // Fetch wavelengths the user is tuned into
   const fetchUserWavelengths = async () => {
@@ -41,6 +43,77 @@ export function WavelengthProvider({ children }) {
     } catch (err) {
       console.error('Error fetching user wavelengths:', err);
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch a single wavelength by ID
+  const fetchWavelength = async (id) => {
+    setLoading(true);
+    try {
+      // Fetch the wavelength data
+      const { data: wavelengthData, error: wavelengthError } = await supabase
+        .from('wavelengths')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (wavelengthError) throw wavelengthError;
+      
+      // Calculate relative time for expiry
+      const expiry = new Date(wavelengthData.expires_at);
+      const now = new Date();
+      const diff = expiry - now;
+      
+      let timeRemaining = 'Expired';
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        if (days > 0) {
+          timeRemaining = `Ends in ${days}d`;
+        } else {
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          if (hours > 0) {
+            timeRemaining = `${hours}h left`;
+          } else {
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            timeRemaining = `${minutes}m left`;
+          }
+        }
+      }
+      
+      // Add the timeRemaining property to wavelength object
+      wavelengthData.timeRemaining = timeRemaining;
+      
+      // Check if user is tuned in
+      if (user) {
+        const { data: userWavelength } = await supabase
+          .from('user_wavelengths')
+          .select('active')
+          .eq('user_id', user.id)
+          .eq('wavelength_id', id)
+          .single();
+        
+        wavelengthData.is_tuned_in = !!userWavelength?.active;
+      }
+      
+      setWavelength(wavelengthData);
+      
+      // Fetch posts for this wavelength
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .eq('wavelength_id', id)
+        .order('created_at', { ascending: false });
+      
+      if (postsError) throw postsError;
+      setPosts(postsData || []);
+      
+      return { wavelength: wavelengthData, posts: postsData };
+    } catch (err) {
+      console.error('Error fetching wavelength:', err);
+      setError(err.message);
+      return { error: err.message };
     } finally {
       setLoading(false);
     }
@@ -179,15 +252,74 @@ export function WavelengthProvider({ children }) {
     }
   };
 
+  // Create a new post in a wavelength
+  const createPost = async (wavelengthId, content) => {
+    if (!user) return { error: 'User not authenticated' };
+    if (!wavelengthId) return { error: 'Wavelength ID is required' };
+    if (!content || content.trim() === '') return { error: 'Post content is required' };
+    
+    setLoading(true);
+    try {
+      // First check if user is tuned into this wavelength
+      const { data: userWavelength } = await supabase
+        .from('user_wavelengths')
+        .select('active')
+        .eq('user_id', user.id)
+        .eq('wavelength_id', wavelengthId)
+        .single();
+      
+      if (!userWavelength?.active) {
+        return { error: 'You must be tuned into this wavelength to post' };
+      }
+      
+      // Create the post
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          wavelength_id: wavelengthId,
+          user_id: user.id,
+          content,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Fetch the post with user details
+      const { data: postWithUser, error: fetchError } = await supabase
+        .from('posts')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .eq('id', data.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Update the posts state
+      setPosts(prevPosts => [postWithUser, ...prevPosts]);
+      
+      return { success: true, post: postWithUser };
+    } catch (err) {
+      console.error('Error creating post:', err);
+      return { error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     activeWavelengths,
+    wavelength,
+    posts,
     loading,
     error,
     fetchUserWavelengths,
+    fetchWavelength,
     tuneIn,
     tuneOut,
     fetchTrendingWavelengths,
     createWavelength,
+    createPost,
   };
 
   return <WavelengthContext.Provider value={value}>{children}</WavelengthContext.Provider>;

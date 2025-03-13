@@ -1,366 +1,271 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useWavelength } from '../context/WavelengthContext';
-import { useWavelengthPosts } from '../hooks/useSupabaseQuery';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Coffee, Code, Globe } from 'lucide-react';
 import PostCard from '../components/wavelength/PostCard';
+import { useWavelength } from '../context/WavelengthContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function WavelengthView() {
-  const { wavelengthId } = useParams();
+  const { wavelengthId } = useParams(); // Changed from 'id' to match route parameter
+  const { wavelength, posts, loading, fetchWavelength, tuneIn, tuneOut, createPost } = useWavelength();
   const { user } = useAuth();
-  const { tuneIn, tuneOut } = useWavelength();
-  
-  const [wavelength, setWavelength] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [isTunedIn, setIsTunedIn] = useState(false);
-  const [newPostContent, setNewPostContent] = useState('');
-  const [postingContent, setPostingContent] = useState(false);
-
-  // Use cached posts query
-  const { 
-    data: posts, 
-    isLoading: postsLoading,
-    refetch: refetchPosts 
-  } = useWavelengthPosts(wavelengthId);
-  
-  const fetchActiveUsers = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_wavelengths')
-        .select('profiles:user_id(id, username, avatar_url)')
-        .eq('wavelength_id', wavelengthId)
-        .eq('active', true)
-        .limit(50);
-        
-      if (error) throw error;
-      setUsers(data?.map(item => item.profiles) || []);
-    } catch (error) {
-      console.error('Error fetching active users:', error);
-    }
-  }, [wavelengthId]);
-
-  const fetchWavelengthData = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('wavelengths')
-        .select('*')
-        .eq('id', wavelengthId)
-        .single();
-        
-      if (error) throw error;
-      setWavelength(data);
-      
-      await fetchActiveUsers();
-    } catch (error) {
-      console.error('Error fetching wavelength:', error);
-    }
-  }, [wavelengthId, fetchActiveUsers]);
-
-  const checkIfTunedIn = useCallback(async () => {
-    if (!user) {
-      setIsTunedIn(false);
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('user_wavelengths')
-        .select('active')
-        .eq('user_id', user.id)
-        .eq('wavelength_id', wavelengthId)
-        .single();
-        
-      if (error && error.code !== 'PGRST116') throw error;
-      setIsTunedIn(data?.active || false);
-    } catch (error) {
-      console.error('Error checking tune status:', error);
-    }
-  }, [user, wavelengthId]);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [isTuningIn, setIsTuningIn] = useState(false);
+  const [postContent, setPostContent] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
+  const [postError, setPostError] = useState(null);
 
   useEffect(() => {
-    fetchWavelengthData();
-    checkIfTunedIn();
-    
-    // Set up real-time subscriptions
-    const wavelengthSubscription = supabase
-      .channel('wavelength_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'wavelengths',
-          filter: `id=eq.${wavelengthId}`
-        }, 
-        () => {
-          fetchWavelengthData();
-        }
-      )
-      .subscribe();
-
-    const usersSubscription = supabase
-      .channel('wavelength_users')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'user_wavelengths',
-          filter: `wavelength_id=eq.${wavelengthId}`
-        }, 
-        () => {
-          fetchActiveUsers();
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(wavelengthSubscription);
-      supabase.removeChannel(usersSubscription);
-    };
-  }, [wavelengthId, user, fetchWavelengthData, checkIfTunedIn, fetchActiveUsers]);
+    if (wavelengthId) {
+      fetchWavelength(wavelengthId);
+    }
+  }, [wavelengthId, fetchWavelength]);
 
   const handleTuneToggle = async () => {
-    if (!user) return;
-    
+    if (!user) {
+      // Redirect to sign in or show sign in modal
+      return;
+    }
+
+    setIsTuningIn(true);
     try {
-      if (isTunedIn) {
+      if (wavelength?.is_tuned_in) {
         await tuneOut(wavelengthId);
-        setIsTunedIn(false);
       } else {
         await tuneIn(wavelengthId);
-        setIsTunedIn(true);
       }
-      
-      // Refresh wavelength data to get updated user count
-      fetchWavelengthData();
+      // Refresh wavelength data to update UI state
+      await fetchWavelength(wavelengthId);
     } catch (error) {
       console.error('Error toggling tune status:', error);
-    }
-  };
-
-  const handlePostSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!user || !newPostContent.trim()) return;
-    
-    setPostingContent(true);
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .insert({
-          user_id: user.id,
-          wavelength_id: wavelengthId,
-          content: newPostContent.trim(),
-          created_at: new Date()
-        });
-        
-      if (error) throw error;
-      
-      // Clear input and refetch posts
-      setNewPostContent('');
-      refetchPosts();
-    } catch (error) {
-      console.error('Error posting content:', error);
     } finally {
-      setPostingContent(false);
+      setIsTuningIn(false);
     }
   };
 
-  const formatTimeAgo = (dateStr) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now - date;
+  const handleCreatePost = async () => {
+    if (!user) return;
+    if (!postContent.trim()) return;
     
-    const diffSecs = Math.floor(diffMs / 1000);
-    if (diffSecs < 60) return `${diffSecs}s ago`;
+    setIsPosting(true);
+    setPostError(null);
     
-    const diffMins = Math.floor(diffSecs / 60);
-    if (diffMins < 60) return `${diffMins}m ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 30) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
+    try {
+      const { error } = await createPost(wavelengthId, postContent);
+      
+      if (error) {
+        setPostError(error);
+        return;
+      }
+      
+      // Clear the form
+      setPostContent('');
+    } catch (err) {
+      console.error('Error creating post:', err);
+      setPostError('Failed to create post. Please try again.');
+    } finally {
+      setIsPosting(false);
+    }
   };
-
-  if (postsLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading wavelength...</div>;
-  }
-
-  if (!wavelength) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-2xl font-semibold">Wavelength not found</h2>
-        <p className="text-gray-600 mt-2">This wavelength may have expired or doesn't exist.</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      {/* Wavelength header */}
-      <div 
-        className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg p-6 mb-8 text-white"
-        style={{ 
-          backgroundImage: `linear-gradient(135deg, rgba(99,102,241,${wavelength.intensity + 0.1}) 0%, rgba(168,85,247,${wavelength.intensity + 0.2}) 50%, rgba(236,72,153,${wavelength.intensity}) 100%)` 
-        }}
-      >
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-          <h1 className="text-3xl font-bold mb-2 md:mb-0">{wavelength.name}</h1>
+    <div className="max-w-6xl mx-auto py-6 px-4 grid grid-cols-1 md:grid-cols-12 gap-6">
+      {/* Left sidebar */}
+      <div className="hidden md:block md:col-span-3">
+        <div className="bg-white rounded-xl shadow p-4 sticky top-6">
+          <Link 
+            to="/discover"
+            className="flex items-center text-gray-600 hover:text-indigo-600 mb-4"
+          >
+            <ArrowLeft size={16} className="mr-1" />
+            <span>Back to discover</span>
+          </Link>
           
-          {user && (
+          <div className="border-t pt-4">
+            <div className="flex items-center mb-2">
+              <Globe className="text-indigo-600 mr-2" size={20} />
+              <h3 className="font-semibold text-lg">{wavelength?.name}</h3>
+            </div>
+            <p className="text-gray-500 mb-3">{wavelength?.active_users_count} people tuned in</p>
+            <p className="text-gray-500 mb-4">{wavelength?.timeRemaining}</p>
+            
             <button 
               onClick={handleTuneToggle}
-              className={`px-5 py-2 rounded-full text-sm font-medium ${
-                isTunedIn 
-                  ? 'bg-white text-indigo-700' 
-                  : 'bg-black bg-opacity-30 text-white hover:bg-opacity-40'
-              }`}
+              disabled={isTuningIn || loading}
+              className={`w-full p-2 ${wavelength?.is_tuned_in 
+                ? 'bg-gray-600 hover:bg-gray-700' 
+                : 'bg-indigo-600 hover:bg-indigo-700'} 
+                text-white rounded-lg font-medium disabled:opacity-50 transition`}
             >
-              {isTunedIn ? 'Tuned In ✓' : 'Tune In'}
+              {isTuningIn ? 'Processing...' : wavelength?.is_tuned_in ? 'Tune Out' : 'Tune In'}
             </button>
-          )}
-        </div>
-        
-        <p className="text-white text-opacity-90 mb-4">{wavelength.description}</p>
-        
-        <div className="flex flex-wrap gap-4 text-sm">
-          <div className="bg-white bg-opacity-20 px-4 py-2 rounded-full">
-            Category: {wavelength.category}
           </div>
-          <div className="bg-white bg-opacity-20 px-4 py-2 rounded-full">
-            {wavelength.active_users_count} tuned in
-          </div>
-          <div className="bg-white bg-opacity-20 px-4 py-2 rounded-full">
-            Expires: {new Date(wavelength.expires_at).toLocaleDateString()}
+          
+          <div className="border-t mt-4 pt-4">
+            <h4 className="font-medium text-gray-700 mb-2">About this wavelength</h4>
+            <p className="text-gray-500 text-sm">
+              {wavelength?.description || 'Join others in this wavelength to share experiences and connect.'}
+            </p>
           </div>
         </div>
       </div>
-      
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Main content area - posts */}
-        <div className="lg:w-2/3">
-          {user && isTunedIn && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-              <form onSubmit={handlePostSubmit}>
-                <textarea
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="What's happening on this wavelength?"
-                  rows={3}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                  disabled={postingContent}
-                />
-                <div className="flex justify-end mt-2">
-                  <button
-                    type="submit"
-                    disabled={postingContent || !newPostContent.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-full text-sm font-medium disabled:opacity-50"
-                  >
-                    {postingContent ? 'Posting...' : 'Share on Wavelength'}
-                  </button>
-                </div>
-              </form>
+
+      {/* Main content */}
+      <div className="col-span-1 md:col-span-6">
+        {/* Mobile back button */}
+        <Link 
+          to="/discover"
+          className="md:hidden flex items-center text-gray-600 mb-4"
+        >
+          <ArrowLeft size={16} className="mr-1" />
+          <span>Back</span>
+        </Link>
+
+        {/* Post creation form */}
+        <div className="bg-white rounded-xl shadow p-4 mb-4">
+          <div className="flex items-center mb-3">
+            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold mr-3">
+              {user?.email?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <input 
+              type="text" 
+              placeholder="Share your experience in this wavelength..."
+              value={postContent}
+              onChange={(e) => setPostContent(e.target.value)}
+              disabled={!user || !wavelength?.is_tuned_in || isPosting}
+              className="flex-1 bg-gray-100 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+            />
+          </div>
+          
+          {postError && (
+            <div className="mb-3 text-sm text-red-600">
+              {postError}
             </div>
           )}
           
-          <h2 className="text-xl font-semibold mb-4">Experience Capsules</h2>
+          <div className="flex justify-end">
+            <button 
+              onClick={handleCreatePost}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-indigo-700 transition"
+              disabled={!postContent.trim() || !user || !wavelength?.is_tuned_in || isPosting}
+            >
+              {isPosting ? 'Posting...' : 'Post'}
+            </button>
+          </div>
           
           {!user && (
-            <div className="bg-blue-50 text-blue-700 p-4 rounded-lg mb-6">
-              <p>Sign in to participate in this wavelength and share your experiences.</p>
-            </div>
+            <p className="text-sm text-gray-500 mt-2">You must be signed in to post</p>
           )}
-          
-          {user && !isTunedIn && (
-            <div className="bg-indigo-50 text-indigo-700 p-4 rounded-lg mb-6">
-              <p>Tune in to this wavelength to post your experiences.</p>
-            </div>
+          {user && !wavelength?.is_tuned_in && (
+            <p className="text-sm text-gray-500 mt-2">You need to tune in to this wavelength to post</p>
           )}
-          
-          {posts.length > 0 ? (
-            <div className="space-y-4">
-              {posts.map(post => (
-                <div key={post.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <div className="flex items-start">
-                    <div className="w-10 h-10 rounded-full overflow-hidden mr-3 flex-shrink-0">
-                      {post.profiles.avatar_url ? (
-                        <img 
-                          src={post.profiles.avatar_url} 
-                          alt="User" 
-                          className="w-full h-full object-cover" 
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
-                          {post.profiles.username?.[0] || '?'}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center mb-1">
-                        <span className="font-medium mr-2">{post.profiles.username || 'Anonymous'}</span>
-                        <span className="text-gray-500 text-sm">{formatTimeAgo(post.created_at)}</span>
-                      </div>
-                      <p className="text-gray-800 whitespace-pre-wrap">{post.content}</p>
-                      
-                      {post.media_url && (
-                        <div className="mt-3 rounded-lg overflow-hidden">
-                          <img 
-                            src={post.media_url} 
-                            alt="Post media" 
-                            className="w-full h-auto" 
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        </div>
+        
+        <div className="flex space-x-3 mb-4 overflow-x-auto pb-2">
+          <button 
+            onClick={() => setActiveFilter('all')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'all' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            All Posts
+          </button>
+          <button 
+            onClick={() => setActiveFilter('trending')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'trending' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Trending
+          </button>
+          <button 
+            onClick={() => setActiveFilter('questions')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'questions' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Questions
+          </button>
+          <button 
+            onClick={() => setActiveFilter('media')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'media' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Media
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : posts?.length > 0 ? (
+            posts.map(post => (
+              <PostCard key={post.id} post={post} />
+            ))
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <p className="text-gray-500">
-                No experiences shared on this wavelength yet. 
-                {user && isTunedIn ? " Be the first to post!" : ""}
+            <div className="text-center py-8 bg-white rounded-xl shadow p-6">
+              <h3 className="text-xl font-semibold text-gray-700">No posts yet</h3>
+              <p className="text-gray-500 mt-2">
+                Be the first to share in this wavelength!
               </p>
             </div>
           )}
         </div>
-        
-        {/* Sidebar - Active Users */}
-        <div className="lg:w-1/3">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4">
-            <h3 className="font-semibold mb-4">People on this wavelength</h3>
-            
-            {users.length > 0 ? (
-              <div className="space-y-3">
-                {users.map(user => (
-                  <div key={user.id} className="flex items-center">
-                    <div className="w-8 h-8 rounded-full overflow-hidden mr-3">
-                      {user.avatar_url ? (
-                        <img 
-                          src={user.avatar_url} 
-                          alt="User" 
-                          className="w-full h-full object-cover" 
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-                          {user.username?.[0] || '?'}
-                        </div>
-                      )}
-                    </div>
-                    <span>{user.username || 'Anonymous'}</span>
-                  </div>
-                ))}
+      </div>
+
+      {/* Right sidebar */}
+      <div className="hidden md:block md:col-span-3">
+        <div className="bg-white rounded-xl shadow p-4 sticky top-6">
+          <h3 className="font-semibold text-gray-700 mb-3">Active Members</h3>
+          
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm mr-2">
+                A
               </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No one is currently tuned in to this wavelength.
-              </p>
-            )}
+              <span className="text-gray-700">Alex</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-semibold text-sm mr-2">
+                J
+              </div>
+              <span className="text-gray-700">Jordan</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold text-sm mr-2">
+                T
+              </div>
+              <span className="text-gray-700">Taylor</span>
+            </div>
+          </div>
+          
+          <div className="mt-4 text-center">
+            <button className="text-indigo-600 text-sm">
+              See all members
+            </button>
+          </div>
+          
+          <div className="border-t mt-4 pt-4">
+            <h4 className="font-medium text-gray-700 mb-2">Related Wavelengths</h4>
+            <div className="space-y-2">
+              <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <Coffee className="text-orange-500 mr-2" size={16} />
+                <span className="text-gray-700 text-sm">Coffee Club</span>
+              </div>
+              <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <Coffee className="text-orange-500 mr-2" size={16} />
+                <span className="text-gray-700 text-sm">Breakfast Ideas</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

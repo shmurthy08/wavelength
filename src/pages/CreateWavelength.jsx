@@ -65,11 +65,17 @@ export default function CreateWavelength() {
       
       const { data, error } = await createWavelength(wavelengthData);
       
-      if (error || !data || !data.id) {
-        throw new Error(error || 'Failed to create wavelength.');
+      if (error) {
+        throw new Error(error);
       }
       
-      // Navigate to the newly created wavelength
+      if (!data) {
+        throw new Error('Failed to create wavelength. No data returned.');
+      }
+      
+      console.log('Wavelength created:', data);
+      
+      // Navigate to the newly created wavelength with the correct parameter name
       navigate(`/wavelength/${data.id}`);
     } catch (err) {
       console.error('Error creating wavelength:', err);

@@ -1,84 +1,147 @@
 import { useState } from 'react';
-import { useWavelengths } from '../hooks/useSupabaseQuery';
-import { useWavelength } from '../context/WavelengthContext';
+import { Coffee, Code, Globe } from 'lucide-react';
 import WavelengthCard from '../components/wavelength/WavelengthCard';
+import useWavelengthPosts from '../hooks/useWavelengthPosts';
 
 export default function Discover() {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const { tuneIn } = useWavelength();
+  const [activeFilter, setActiveFilter] = useState('trending');
+  const { wavelengths, isLoading } = useWavelengthPosts();
   
-  const { data: wavelengths, isLoading } = useWavelengths(
-    selectedCategory === 'all' ? { limit: 20 } : { category: selectedCategory, limit: 20 }
-  );
-  
-  const { data: categories = [] } = useWavelengths(
-    {},
-    {
-      select: (data) => [...new Set(data.map(w => w.category))].sort(),
-      staleTime: 1000 * 60 * 60, // Cache categories for 1 hour
-    }
-  );
-  
-  const handleTuneIn = async (wavelengthId) => {
-    const { error } = await tuneIn(wavelengthId);
-    if (error) {
-      console.error('Error tuning in:', error);
-    }
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Discover Wavelengths</h1>
-      
-      {/* Category filters */}
-      <div className="mb-8 flex flex-wrap gap-2">
-        <button 
-          className={`px-4 py-2 rounded-full text-sm font-medium ${
-            selectedCategory === 'all' 
-              ? 'bg-indigo-600 text-white' 
-              : 'bg-gray-200 text-gray-800'
-          }`}
-          onClick={() => setSelectedCategory('all')}
-        >
-          All
-        </button>
-        
-        {categories.map(category => (
-          <button
-            key={category}
-            className={`px-4 py-2 rounded-full text-sm font-medium ${
-              selectedCategory === category
-                ? 'bg-indigo-600 text-white' 
-                : 'bg-gray-200 text-gray-800'
-            }`}
-            onClick={() => setSelectedCategory(category)}
-          >
-            {category}
-          </button>
-        ))}
+    <div className="max-w-6xl mx-auto py-6 px-4 grid grid-cols-1 md:grid-cols-12 gap-6">
+      {/* Left sidebar - My Wavelengths */}
+      <div className="hidden md:block md:col-span-3">
+        <div className="bg-white rounded-xl shadow p-4">
+          <h3 className="font-semibold text-gray-700 mb-3">My Wavelengths</h3>
+          <ul className="space-y-2">
+            <li className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <Coffee className="text-orange-500 mr-2" size={18} />
+              <span className="text-gray-700">Morning Coffee</span>
+            </li>
+            <li className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <Code className="text-blue-500 mr-2" size={18} />
+              <span className="text-gray-700">Coding Projects</span>
+            </li>
+            <li className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <Globe className="text-green-500 mr-2" size={18} />
+              <span className="text-gray-700">Weekend Hiking</span>
+            </li>
+          </ul>
+          
+          <div className="mt-4 pt-4 border-t">
+            <button className="w-full p-2 bg-indigo-600 text-white rounded-lg font-medium flex items-center justify-center">
+              <span className="mr-2">+</span>
+              Create Wavelength
+            </button>
+          </div>
+        </div>
       </div>
-      
-      {isLoading ? (
-        <div className="flex justify-center items-center h-48">
-          <p>Loading wavelengths...</p>
+
+      {/* Main content */}
+      <div className="col-span-1 md:col-span-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-1">Discover Wavelengths</h1>
+          <p className="text-gray-500">Find experiences happening right now</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wavelengths?.map(wavelength => (
-            <WavelengthCard 
-              key={wavelength.id} 
-              wavelength={wavelength} 
-              onTuneIn={handleTuneIn} 
-            />
-          ))}
+
+        <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+          <button 
+            onClick={() => setActiveFilter('trending')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'trending' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Trending
+          </button>
+          <button 
+            onClick={() => setActiveFilter('for-you')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'for-you' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            For You
+          </button>
+          <button 
+            onClick={() => setActiveFilter('creative')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'creative' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Creative
+          </button>
+          <button 
+            onClick={() => setActiveFilter('outdoors')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'outdoors' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Outdoors
+          </button>
+          <button 
+            onClick={() => setActiveFilter('tech')}
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+              activeFilter === 'tech' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700'
+            }`}
+          >
+            Tech
+          </button>
         </div>
-      )}
-      
-      {!isLoading && (!wavelengths || wavelengths.length === 0) && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No wavelengths found for this category.</p>
+
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : (
+            wavelengths?.map(wavelength => (
+              <WavelengthCard 
+                key={wavelength.id} 
+                wavelength={wavelength}
+              />
+            ))
+          )}
         </div>
-      )}
+      </div>
+
+      {/* Right sidebar - Suggestions */}
+      <div className="hidden md:block md:col-span-3">
+        <div className="bg-white rounded-xl shadow p-4">
+          <h3 className="font-semibold text-gray-700 mb-3">Suggested For You</h3>
+          
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+              <Coffee className="text-orange-400 mb-2" />
+              <p className="font-medium text-sm">Early Birds</p>
+              <p className="text-xs text-gray-500">156 people</p>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+              <Code className="text-blue-500 mb-2" />
+              <p className="font-medium text-sm">Weekend Projects</p>
+              <p className="text-xs text-gray-500">89 people</p>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t">
+            <h3 className="font-semibold text-gray-700 mb-3">Trending Topics</h3>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">#CoffeeTime</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">#TechTalk</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">#WFHLife</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">#CodeReview</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">#WeekendVibes</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
