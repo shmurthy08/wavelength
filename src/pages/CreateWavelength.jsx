@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWavelength } from '../context/WavelengthContext';
+import { useWavelength } from '../hooks/useWavelength';
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateWavelength() {

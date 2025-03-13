@@ -1,334 +1,316 @@
-import { createContext, useContext, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-
-const WavelengthContext = createContext();
+import { WavelengthContext } from './wavelengthContext.base';
 
 export function WavelengthProvider({ children }) {
   const { user } = useAuth();
-  const [activeWavelengths, setActiveWavelengths] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
   const [wavelength, setWavelength] = useState(null);
-  const [posts, setPosts] = useState([]);
 
-  // Fetch wavelengths the user is tuned into
-  const fetchUserWavelengths = async () => {
+  // Set up real-time subscriptions
+  useEffect(() => {
     if (!user) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_wavelengths')
-        .select(`
-          wavelength_id,
-          active,
-          wavelengths (
-            id,
-            name,
-            description,
-            category,
-            created_at,
-            expires_at,
-            intensity,
-            active_users_count
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('active', true);
 
-      if (error) throw error;
+    // Subscribe to user's wavelength changes
+    const wavelengthsSubscription = supabase
+      .channel('wavelengths_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wavelengths',
+      }, () => {
+        queryClient.invalidateQueries(['wavelengths']);
+        queryClient.invalidateQueries(['wavelength']);
+      })
+      .subscribe();
+
+    // Subscribe to user's tuned-in status changes
+    const userWavelengthsSubscription = supabase
+      .channel('user_wavelengths_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_wavelengths',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        queryClient.invalidateQueries(['userWavelengths', user.id]);
+        queryClient.invalidateQueries(['wavelength']);
+        queryClient.invalidateQueries(['wavelengths']);
+      })
+      .subscribe();
+
+    // Subscribe to posts changes
+    const postsSubscription = supabase
+      .channel('posts_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'posts',
+      }, (payload) => {
+        queryClient.invalidateQueries(['posts', payload.new?.wavelength_id]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(wavelengthsSubscription);
+      supabase.removeChannel(userWavelengthsSubscription);
+      supabase.removeChannel(postsSubscription);
+    };
+  }, [user, queryClient]);
+
+  const fetchUserWavelengths = async () => {
+    if (!user) return [];
+    
+    const { data, error } = await supabase
+      .from('user_wavelengths')
+      .select(`
+        wavelength_id,
+        active,
+        wavelengths (
+          id,
+          name,
+          description,
+          category,
+          created_at,
+          expires_at,
+          intensity,
+          active_users_count,
+          icon_type,
+          color
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('active', true);
       
-      setActiveWavelengths(data?.map(item => item.wavelengths) || []);
-    } catch (err) {
-      console.error('Error fetching user wavelengths:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    if (error) throw error;
+    return data?.map(item => ({
+      ...item.wavelengths,
+      is_tuned_in: true
+    })) || [];
   };
 
-  // Fetch a single wavelength by ID
   const fetchWavelength = async (id) => {
-    setLoading(true);
-    try {
-      // Fetch the wavelength data
-      const { data: wavelengthData, error: wavelengthError } = await supabase
-        .from('wavelengths')
-        .select('*')
-        .eq('id', id)
-        .single();
+    // First get the wavelength data
+    const { data: wavelength, error: wavelengthError } = await supabase
+      .from('wavelengths')
+      .select('*')
+      .eq('id', id)
+      .single();
       
-      if (wavelengthError) throw wavelengthError;
-      
-      // Calculate relative time for expiry
-      const expiry = new Date(wavelengthData.expires_at);
-      const now = new Date();
-      const diff = expiry - now;
-      
-      let timeRemaining = 'Expired';
-      if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        if (days > 0) {
-          timeRemaining = `Ends in ${days}d`;
-        } else {
-          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          if (hours > 0) {
-            timeRemaining = `${hours}h left`;
-          } else {
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            timeRemaining = `${minutes}m left`;
-          }
-        }
-      }
-      
-      // Add the timeRemaining property to wavelength object
-      wavelengthData.timeRemaining = timeRemaining;
-      
-      // Check if user is tuned in
-      if (user) {
-        const { data: userWavelength } = await supabase
-          .from('user_wavelengths')
-          .select('active')
-          .eq('user_id', user.id)
-          .eq('wavelength_id', id)
-          .single();
-        
-        wavelengthData.is_tuned_in = !!userWavelength?.active;
-      }
-      
-      setWavelength(wavelengthData);
-      
-      // Fetch posts for this wavelength
-      const { data: postsData, error: postsError } = await supabase
-        .from('posts')
-        .select('*, profiles:user_id(username, avatar_url)')
+    if (wavelengthError) throw wavelengthError;
+
+    // If user is logged in, check if they're tuned in
+    if (user) {
+      const { data: userWavelength, error: userWavelengthError } = await supabase
+        .from('user_wavelengths')
+        .select('active')
         .eq('wavelength_id', id)
-        .order('created_at', { ascending: false });
-      
-      if (postsError) throw postsError;
-      setPosts(postsData || []);
-      
-      return { wavelength: wavelengthData, posts: postsData };
-    } catch (err) {
-      console.error('Error fetching wavelength:', err);
-      setError(err.message);
-      return { error: err.message };
-    } finally {
-      setLoading(false);
+        .eq('user_id', user.id)
+        .single();
+        
+      if (!userWavelengthError) {
+        wavelength.is_tuned_in = userWavelength?.active || false;
+      }
     }
+
+    return wavelength;
   };
 
-  // Tune into a wavelength
-  const tuneIn = async (wavelengthId) => {
-    if (!user) return { error: 'User not authenticated' };
-    
-    try {
-      // Check if user is already tuned in
-      const { data: existing } = await supabase
+  const fetchTrendingWavelengths = async () => {
+    const { data: wavelengths, error } = await supabase
+      .from('wavelengths')
+      .select('*')
+      .order('active_users_count', { ascending: false })
+      .limit(20);
+      
+    if (error) throw error;
+
+    // If user is logged in, fetch their tuned-in status for these wavelengths
+    if (user) {
+      const { data: userWavelengths, error: userWavelengthError } = await supabase
+        .from('user_wavelengths')
+        .select('wavelength_id, active')
+        .eq('user_id', user.id)
+        .in('wavelength_id', wavelengths.map(w => w.id));
+
+      if (!userWavelengthError && userWavelengths) {
+        const tunedInMap = userWavelengths.reduce((acc, uw) => {
+          acc[uw.wavelength_id] = uw.active;
+          return acc;
+        }, {});
+
+        wavelengths = wavelengths.map(w => ({
+          ...w,
+          is_tuned_in: tunedInMap[w.id] || false
+        }));
+      }
+    }
+
+    return wavelengths;
+  };
+
+  const { data: activeWavelengths = [], isLoading: loadingUserWavelengths } = useQuery({
+    queryKey: ['userWavelengths', user?.id],
+    queryFn: fetchUserWavelengths,
+    enabled: !!user,
+    staleTime: 1000 * 30, // Consider data fresh for 30 seconds
+  });
+
+  const { data: wavelengthData, isLoading: loadingWavelength } = useQuery({
+    queryKey: ['wavelength', wavelength?.id],
+    queryFn: () => fetchWavelength(wavelength?.id),
+    enabled: !!wavelength?.id,
+    onSuccess: (data) => setWavelength(data),
+    staleTime: 1000 * 30,
+  });
+
+  const tuneIn = useMutation({
+    mutationFn: async (wavelengthId) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      // Check if wavelength exists and hasn't expired
+      const { data: wavelength, error: wavelengthError } = await supabase
+        .from('wavelengths')
+        .select('expires_at')
+        .eq('id', wavelengthId)
+        .single();
+        
+      if (wavelengthError) throw wavelengthError;
+      if (!wavelength) throw new Error('Wavelength not found');
+      if (new Date(wavelength.expires_at) <= new Date()) {
+        throw new Error('This wavelength has expired');
+      }
+      
+      const { data: existing, error: existingError } = await supabase
         .from('user_wavelengths')
         .select('*')
         .eq('user_id', user.id)
         .eq('wavelength_id', wavelengthId)
         .single();
 
+      if (existingError && existingError.code !== 'PGRST116') {
+        throw existingError;
+      }
+
       if (existing) {
-        // Update existing record to active
         const { error } = await supabase
           .from('user_wavelengths')
-          .update({ active: true, tuned_in_at: new Date() })
+          .update({ active: true, tuned_in_at: new Date().toISOString() })
           .eq('id', existing.id);
-        
+          
         if (error) throw error;
       } else {
-        // Create new record
         const { error } = await supabase
           .from('user_wavelengths')
           .insert({
             user_id: user.id,
             wavelength_id: wavelengthId,
             active: true,
-            tuned_in_at: new Date()
+            tuned_in_at: new Date().toISOString(),
           });
-        
+          
         if (error) throw error;
       }
 
-      // Update active users count
       await supabase.rpc('increment_active_users_count', { wavelength_id: wavelengthId });
-      
-      // Refresh user wavelengths
-      await fetchUserWavelengths();
-      
-      return { success: true };
-    } catch (err) {
-      console.error('Error tuning into wavelength:', err);
-      return { error: err.message };
+    },
+    onSuccess: (_, wavelengthId) => {
+      queryClient.invalidateQueries(['userWavelengths', user?.id]);
+      queryClient.invalidateQueries(['wavelength', wavelengthId]);
+      queryClient.invalidateQueries(['wavelengths']);
+    },
+    onError: (error) => {
+      console.error('Error tuning in:', error);
+      throw error;
     }
-  };
+  });
 
-  // Tune out of a wavelength
-  const tuneOut = async (wavelengthId) => {
-    if (!user) return { error: 'User not authenticated' };
-    
-    try {
+  const tuneOut = useMutation({
+    mutationFn: async (wavelengthId) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { error } = await supabase
         .from('user_wavelengths')
         .update({ active: false })
         .eq('user_id', user.id)
         .eq('wavelength_id', wavelengthId);
-      
+        
       if (error) throw error;
 
-      // Update active users count
       await supabase.rpc('decrement_active_users_count', { wavelength_id: wavelengthId });
-      
-      // Refresh user wavelengths
-      await fetchUserWavelengths();
-      
-      return { success: true };
-    } catch (err) {
-      console.error('Error tuning out of wavelength:', err);
-      return { error: err.message };
+    },
+    onSuccess: (_, wavelengthId) => {
+      queryClient.invalidateQueries(['userWavelengths', user?.id]);
+      queryClient.invalidateQueries(['wavelength', wavelengthId]);
+      queryClient.invalidateQueries(['wavelengths']);
+    },
+    onError: (error) => {
+      console.error('Error tuning out:', error);
+      throw error;
     }
-  };
-  
-  // Fetch trending wavelengths
-  const fetchTrendingWavelengths = async (limit = 10) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('wavelengths')
-        .select('*')
-        .order('active_users_count', { ascending: false })
-        .limit(limit);
+  });
 
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Error fetching trending wavelengths:', err);
-      setError(err.message);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Create a new wavelength
-  const createWavelength = async (wavelengthData) => {
-    // Ensure user and user.id exist
-    if (!user || !user.id) return { error: 'User not authenticated' };
-    
-    try {
-      const { data, error } = await supabase
-        .from('wavelengths')
-        .insert({
-          ...wavelengthData,
-          creator_id: user.id,
-          active_users_count: 1
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+  const createPost = useMutation({
+    mutationFn: async ({ wavelengthId, content }) => {
+      if (!user) throw new Error('User not authenticated');
+      if (!content.trim()) throw new Error('Post content is required');
       
-      // Automatically tune in the creator
-      await supabase
-        .from('user_wavelengths')
-        .insert({
-          user_id: user.id,
-          wavelength_id: data.id,
-          active: true,
-          tuned_in_at: new Date()
-        });
-
-      // Refresh user wavelengths
-      await fetchUserWavelengths();
-      
-      return { data };
-    } catch (err) {
-      console.error('Error creating wavelength:', err);
-      return { error: err.message };
-    }
-  };
-
-  // Create a new post in a wavelength
-  const createPost = async (wavelengthId, content) => {
-    if (!user) return { error: 'User not authenticated' };
-    if (!wavelengthId) return { error: 'Wavelength ID is required' };
-    if (!content || content.trim() === '') return { error: 'Post content is required' };
-    
-    setLoading(true);
-    try {
-      // First check if user is tuned into this wavelength
-      const { data: userWavelength } = await supabase
+      // Verify user is tuned into this wavelength
+      const { data: userWavelength, error: userWavelengthError } = await supabase
         .from('user_wavelengths')
         .select('active')
         .eq('user_id', user.id)
         .eq('wavelength_id', wavelengthId)
         .single();
+        
+      if (userWavelengthError) throw new Error('You must be tuned in to post');
+      if (!userWavelength?.active) throw new Error('You must be tuned in to post');
       
-      if (!userWavelength?.active) {
-        return { error: 'You must be tuned into this wavelength to post' };
-      }
-      
-      // Create the post
       const { data, error } = await supabase
         .from('posts')
         .insert({
           wavelength_id: wavelengthId,
           user_id: user.id,
-          content,
-          created_at: new Date().toISOString()
+          content: content.trim(),
+          created_at: new Date().toISOString(),
         })
-        .select()
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            avatar_url
+          )
+        `)
         .single();
-      
+        
       if (error) throw error;
-      
-      // Fetch the post with user details
-      const { data: postWithUser, error: fetchError } = await supabase
-        .from('posts')
-        .select('*, profiles:user_id(username, avatar_url)')
-        .eq('id', data.id)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      // Update the posts state
-      setPosts(prevPosts => [postWithUser, ...prevPosts]);
-      
-      return { success: true, post: postWithUser };
-    } catch (err) {
-      console.error('Error creating post:', err);
-      return { error: err.message };
-    } finally {
-      setLoading(false);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['posts', data.wavelength_id]);
+    },
+    onError: (error) => {
+      console.error('Error creating post:', error);
+      throw error;
     }
-  };
+  });
 
   const value = {
     activeWavelengths,
-    wavelength,
-    posts,
-    loading,
-    error,
-    fetchUserWavelengths,
-    fetchWavelength,
+    wavelength: wavelengthData,
+    loading: loadingUserWavelengths || loadingWavelength,
+    fetchTrendingWavelengths,
     tuneIn,
     tuneOut,
-    fetchTrendingWavelengths,
-    createWavelength,
     createPost,
+    setActiveWavelength: (id) => setWavelength({ id }),
   };
 
-  return <WavelengthContext.Provider value={value}>{children}</WavelengthContext.Provider>;
+  return (
+    <WavelengthContext.Provider value={value}>
+      {children}
+    </WavelengthContext.Provider>
+  );
 }
-
-export const useWavelength = () => {
-  const context = useContext(WavelengthContext);
-  if (context === undefined) {
-    throw new Error('useWavelength must be used within a WavelengthProvider');
-  }
-  return context;
-};

@@ -12,7 +12,7 @@ export default function Navbar() {
   
   return (
     <>
-      <nav className="bg-white shadow-md border-b border-gray-200 fixed w-full z-10">
+      <nav className="bg-white shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             {/* Logo and brand name */}
@@ -66,7 +66,7 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile navigation footer */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex items-center justify-around p-3 z-10">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex items-center justify-around p-3 z-50">
         <Link
           to="/"
           className={`p-2 rounded-full ${isActive('/') ? 'text-indigo-600' : 'text-gray-500'}`}

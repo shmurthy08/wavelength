@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { Coffee, Code, Globe } from 'lucide-react';
 import WavelengthCard from '../components/wavelength/WavelengthCard';
-import useWavelengthPosts from '../hooks/useWavelengthPosts';
+import { useWavelength } from '../hooks/useWavelength';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Discover() {
   const [activeFilter, setActiveFilter] = useState('trending');
-  const { wavelengths, isLoading } = useWavelengthPosts();
-  
+  const { fetchTrendingWavelengths, fetchWavelengthsByCategory } = useWavelength();
+
+  const { data: wavelengths = [], isLoading } = useQuery({
+    queryKey: ['wavelengths', activeFilter],
+    queryFn: () => activeFilter === 'trending' 
+      ? fetchTrendingWavelengths()
+      : fetchWavelengthsByCategory(activeFilter),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
   return (
     <div className="max-w-6xl mx-auto py-6 px-4 grid grid-cols-1 md:grid-cols-12 gap-6">
       {/* Left sidebar - My Wavelengths */}
@@ -100,13 +109,21 @@ export default function Discover() {
         <div className="space-y-4">
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
-          ) : (
-            wavelengths?.map(wavelength => (
+          ) : wavelengths?.length > 0 ? (
+            wavelengths.map(wavelength => (
               <WavelengthCard 
                 key={wavelength.id} 
                 wavelength={wavelength}
+                showTuneInButton={true}
               />
             ))
+          ) : (
+            <div className="text-center py-8 bg-white rounded-xl shadow p-6">
+              <h3 className="text-xl font-semibold text-gray-700">No wavelengths found</h3>
+              <p className="text-gray-500 mt-2">
+                Try a different category or check back later!
+              </p>
+            </div>
           )}
         </div>
       </div>

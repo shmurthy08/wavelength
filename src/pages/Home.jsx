@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { useWavelengths, useUserWavelengths } from '../hooks/useSupabaseQuery';
+import { useWavelengths, useUserWavelengths } from '../hooks/useWavelengthQueries';
 import WavelengthCard from '../components/wavelength/WavelengthCard';
 
 export default function Home() {

@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
-import { useWavelength } from '../../context/WavelengthContext';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useWavelength } from '../../hooks/useWavelength';
 import { useAuth } from '../../context/AuthContext';
 import { Coffee, Code, Globe } from 'lucide-react';
 
@@ -10,8 +11,11 @@ const ICONS = {
 };
 
 export default function WavelengthCard({ wavelength, showTuneInButton = true }) {
-  const { tuneIn, tuneOut } = useWavelength();
+  const { tuneIn, tuneOut, canTuneIn } = useWavelength();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   const formatExpiryTime = (expiryDate) => {
     const expiry = new Date(expiryDate);
@@ -29,54 +33,87 @@ export default function WavelengthCard({ wavelength, showTuneInButton = true }) 
     return `${minutes}m left`;
   };
 
-  const handleTuneIn = async (e) => {
+  const handleTuneToggle = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    e.stopPropagation();
     
-    const { error } = await tuneIn(wavelength.id);
-    if (error) console.error('Error tuning in:', error);
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
+
+    if (!canTuneIn(wavelength.id)) {
+      setError('This wavelength has expired');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      if (wavelength.is_tuned_in) {
+        await tuneOut(wavelength.id);
+      } else {
+        await tuneIn(wavelength.id);
+      }
+    } catch (err) {
+      console.error('Error tuning in/out:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  const handleTuneOut = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    
-    const { error } = await tuneOut(wavelength.id);
-    if (error) console.error('Error tuning out:', error);
+
+  const handleCardClick = (e) => {
+    // Only navigate if the click wasn't on the tune button
+    if (!e.defaultPrevented) {
+      navigate(`/wavelength/${wavelength.id}`);
+    }
   };
 
   const IconComponent = ICONS[wavelength.icon_type?.toLowerCase()] || Globe;
 
   return (
     <div 
-      onClick={() => !showTuneInButton && handleTuneIn()}
-      className="bg-white rounded-xl shadow-md p-5 flex items-center cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={handleCardClick}
+      className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow cursor-pointer"
     >
-      <div 
-        className="p-4 rounded-full mr-4" 
-        style={{ 
-          backgroundColor: `${wavelength.color}20`, 
-          color: wavelength.color || '#6366f1'
-        }}
-      >
-        <IconComponent size={24} />
-      </div>
-      
-      <div className="flex-1">
-        <h3 className="font-semibold text-lg">{wavelength.name}</h3>
-        <p className="text-gray-500">
-          {wavelength.active_users_count} people tuned in • {formatExpiryTime(wavelength.expires_at)}
-        </p>
-      </div>
-      
-      {showTuneInButton && user && (
-        <button
-          onClick={wavelength.is_tuned_in ? handleTuneOut : handleTuneIn}
-          className="px-4 py-2 bg-indigo-100 text-indigo-600 font-medium rounded-full text-sm hover:bg-indigo-200"
+      <div className="flex items-center">
+        <div 
+          className="p-4 rounded-full mr-4" 
+          style={{ 
+            backgroundColor: `${wavelength.color || '#6366f1'}20`, 
+            color: wavelength.color || '#6366f1'
+          }}
         >
-          {wavelength.is_tuned_in ? 'Tune Out' : 'Tune In'}
-        </button>
-      )}
+          <IconComponent size={24} />
+        </div>
+        
+        <div className="flex-1">
+          <h3 className="font-semibold text-lg">{wavelength.name}</h3>
+          <p className="text-gray-500">
+            {wavelength.active_users_count} people tuned in • {formatExpiryTime(wavelength.expires_at)}
+          </p>
+          {error && (
+            <p className="text-red-500 text-sm mt-1">{error}</p>
+          )}
+        </div>
+        
+        {showTuneInButton && user && (
+          <button
+            onClick={handleTuneToggle}
+            disabled={isLoading}
+            className={`px-4 py-2 font-medium rounded-full text-sm transition-colors
+              ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+              ${wavelength.is_tuned_in 
+                ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+              }`}
+          >
+            {isLoading ? 'Processing...' : wavelength.is_tuned_in ? 'Tune Out' : 'Tune In'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

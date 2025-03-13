@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { useProfile, useUserWavelengths } from '../hooks/useSupabaseQuery';
+import { useProfile, useUserWavelengths } from '../hooks/useWavelengthQueries';
 import WavelengthCard from '../components/wavelength/WavelengthCard';
 
 export default function Profile() {

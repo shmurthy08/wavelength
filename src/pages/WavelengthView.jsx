@@ -1,8 +1,8 @@
+import { useWavelength } from '../hooks/useWavelength';
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Coffee, Code, Globe } from 'lucide-react';
 import PostCard from '../components/wavelength/PostCard';
-import { useWavelength } from '../context/WavelengthContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function WavelengthView() {
