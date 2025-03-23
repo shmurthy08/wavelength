@@ -1,0 +1,20 @@
+{
+  "version": "36.0.0",
+  "files": {
+    "dec56c2e7f3e073cc41f9c1711194c05f1cdcd543b92aebad3aa3854a7c33f58": {
+      "source": {
+        "path": "WavelengthStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "207567761455-us-west-1": {
+          "bucketName": "cdk-hnb659fds-assets-207567761455-us-west-1",
+          "objectKey": "dec56c2e7f3e073cc41f9c1711194c05f1cdcd543b92aebad3aa3854a7c33f58.json",
+          "region": "us-west-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::207567761455:role/cdk-hnb659fds-file-publishing-role-207567761455-us-west-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

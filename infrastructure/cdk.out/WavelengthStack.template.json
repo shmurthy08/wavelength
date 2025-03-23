@@ -1,0 +1,1089 @@
+{
+ "Resources": {
+  "WavelengthUserPool6C5E5A64": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_phone_number",
+       "Priority": 1
+      },
+      {
+       "Name": "verified_email",
+       "Priority": 2
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": false
+    },
+    "AutoVerifiedAttributes": [
+     "email"
+    ],
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "RequireUppercase": true
+     }
+    },
+    "Schema": [
+     {
+      "Mutable": true,
+      "Name": "email",
+      "Required": true
+     }
+    ],
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolName": "wavelength-users",
+    "UsernameAttributes": [
+     "email"
+    ],
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthUserPool/Resource"
+   }
+  },
+  "WavelengthUserPoolClient0FBC9568": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AllowedOAuthFlows": [
+     "implicit",
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "openid",
+     "email",
+     "profile"
+    ],
+    "CallbackURLs": [
+     "http://localhost:3000/api/auth/callback/cognito"
+    ],
+    "ExplicitAuthFlows": [
+     "ALLOW_USER_PASSWORD_AUTH",
+     "ALLOW_USER_SRP_AUTH",
+     "ALLOW_REFRESH_TOKEN_AUTH"
+    ],
+    "GenerateSecret": false,
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "UserPoolId": {
+     "Ref": "WavelengthUserPool6C5E5A64"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthUserPoolClient/Resource"
+   }
+  },
+  "RoomsTableA5C1D45B": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "id",
+      "KeyType": "HASH"
+     }
+    ],
+    "TableName": "wavelength-rooms",
+    "TimeToLiveSpecification": {
+     "AttributeName": "expiresAt",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/RoomsTable/Resource"
+   }
+  },
+  "MessagesTable05B58A27": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "id",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "createdAt",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "roomId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "byRoom",
+      "KeySchema": [
+       {
+        "AttributeName": "roomId",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "createdAt",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "id",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "createdAt",
+      "KeyType": "RANGE"
+     }
+    ],
+    "TableName": "wavelength-messages"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/MessagesTable/Resource"
+   }
+  },
+  "WavelengthAPI888462B0": {
+   "Type": "AWS::AppSync::GraphQLApi",
+   "Properties": {
+    "AuthenticationType": "AMAZON_COGNITO_USER_POOLS",
+    "Name": "wavelength-api",
+    "UserPoolConfig": {
+     "AwsRegion": "us-west-1",
+     "DefaultAction": "ALLOW",
+     "UserPoolId": {
+      "Ref": "WavelengthUserPool6C5E5A64"
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/Resource"
+   }
+  },
+  "WavelengthAPISchemaFF80E3D3": {
+   "Type": "AWS::AppSync::GraphQLSchema",
+   "Properties": {
+    "ApiId": {
+     "Fn::GetAtt": [
+      "WavelengthAPI888462B0",
+      "ApiId"
+     ]
+    },
+    "Definition": "type Room @model {\r\n  id: ID!\r\n  title: String!\r\n  description: String!\r\n  createdAt: AWSDateTime!\r\n  expiresAt: AWSDateTime!\r\n  interests: [String!]!\r\n  createdBy: String!\r\n  participants: [String!]!\r\n  messages: [Message] @hasMany\r\n}\r\n\r\ntype Message @model {\r\n  id: ID!\r\n  content: String!\r\n  createdAt: AWSDateTime!\r\n  roomId: ID!\r\n  userId: String!\r\n  userName: String!\r\n  room: Room! @belongsTo\r\n}\r\n\r\ntype Query {\r\n  getRoomsByInterests(interests: [String!]!, limit: Int): [Room!]!\r\n  getActiveRooms(limit: Int): [Room!]!\r\n}\r\n\r\ntype Subscription {\r\n  onCreateMessage(roomId: ID!): Message @aws_subscribe(mutations: [\"createMessage\"])\r\n  onUpdateRoom(id: ID!): Room @aws_subscribe(mutations: [\"updateRoom\"])\r\n}"
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/Schema"
+   }
+  },
+  "WavelengthAPIRoomsDataSourceServiceRole959D1114": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "appsync.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/RoomsDataSource/ServiceRole/Resource"
+   }
+  },
+  "WavelengthAPIRoomsDataSourceServiceRoleDefaultPolicy3376E116": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "RoomsTableA5C1D45B",
+          "Arn"
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WavelengthAPIRoomsDataSourceServiceRoleDefaultPolicy3376E116",
+    "Roles": [
+     {
+      "Ref": "WavelengthAPIRoomsDataSourceServiceRole959D1114"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/RoomsDataSource/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "WavelengthAPIRoomsDataSource36EF0642": {
+   "Type": "AWS::AppSync::DataSource",
+   "Properties": {
+    "ApiId": {
+     "Fn::GetAtt": [
+      "WavelengthAPI888462B0",
+      "ApiId"
+     ]
+    },
+    "DynamoDBConfig": {
+     "AwsRegion": "us-west-1",
+     "TableName": {
+      "Ref": "RoomsTableA5C1D45B"
+     }
+    },
+    "Name": "RoomsDataSource",
+    "ServiceRoleArn": {
+     "Fn::GetAtt": [
+      "WavelengthAPIRoomsDataSourceServiceRole959D1114",
+      "Arn"
+     ]
+    },
+    "Type": "AMAZON_DYNAMODB"
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/RoomsDataSource/Resource"
+   }
+  },
+  "WavelengthAPIMessagesDataSourceServiceRole866EE502": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "appsync.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/MessagesDataSource/ServiceRole/Resource"
+   }
+  },
+  "WavelengthAPIMessagesDataSourceServiceRoleDefaultPolicy78F2F28D": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "MessagesTable05B58A27",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "MessagesTable05B58A27",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WavelengthAPIMessagesDataSourceServiceRoleDefaultPolicy78F2F28D",
+    "Roles": [
+     {
+      "Ref": "WavelengthAPIMessagesDataSourceServiceRole866EE502"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/MessagesDataSource/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "WavelengthAPIMessagesDataSource1CA62212": {
+   "Type": "AWS::AppSync::DataSource",
+   "Properties": {
+    "ApiId": {
+     "Fn::GetAtt": [
+      "WavelengthAPI888462B0",
+      "ApiId"
+     ]
+    },
+    "DynamoDBConfig": {
+     "AwsRegion": "us-west-1",
+     "TableName": {
+      "Ref": "MessagesTable05B58A27"
+     }
+    },
+    "Name": "MessagesDataSource",
+    "ServiceRoleArn": {
+     "Fn::GetAtt": [
+      "WavelengthAPIMessagesDataSourceServiceRole866EE502",
+      "Arn"
+     ]
+    },
+    "Type": "AMAZON_DYNAMODB"
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/MessagesDataSource/Resource"
+   }
+  },
+  "WavelengthAPIQueryGetRoomsByInterestsC1EB8557": {
+   "Type": "AWS::AppSync::Resolver",
+   "Properties": {
+    "ApiId": {
+     "Fn::GetAtt": [
+      "WavelengthAPI888462B0",
+      "ApiId"
+     ]
+    },
+    "DataSourceName": "RoomsDataSource",
+    "FieldName": "getRoomsByInterests",
+    "Kind": "UNIT",
+    "RequestMappingTemplate": "\n        #set($interests = $ctx.args.interests)\n        {\n          \"version\": \"2018-05-29\",\n          \"operation\": \"Scan\",\n          \"filter\": {\n            \"expression\": \"contains(interests, :interest)\",\n            \"expressionValues\": {\n              \":interest\": $util.dynamodb.toDynamoDBJson($interests[0])\n            }\n          }\n        }\n      ",
+    "ResponseMappingTemplate": "$util.toJson($ctx.result.items)",
+    "TypeName": "Query"
+   },
+   "DependsOn": [
+    "WavelengthAPIRoomsDataSource36EF0642",
+    "WavelengthAPISchemaFF80E3D3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/QueryGetRoomsByInterests/Resource"
+   }
+  },
+  "WavelengthAPIQueryGetActiveRooms80E2CAF6": {
+   "Type": "AWS::AppSync::Resolver",
+   "Properties": {
+    "ApiId": {
+     "Fn::GetAtt": [
+      "WavelengthAPI888462B0",
+      "ApiId"
+     ]
+    },
+    "DataSourceName": "RoomsDataSource",
+    "FieldName": "getActiveRooms",
+    "Kind": "UNIT",
+    "RequestMappingTemplate": "\n        {\n          \"version\": \"2018-05-29\",\n          \"operation\": \"Scan\",\n          \"filter\": {\n            \"expression\": \"expiresAt > :now\",\n            \"expressionValues\": {\n              \":now\": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())\n            }\n          }\n        }\n      ",
+    "ResponseMappingTemplate": "$util.toJson($ctx.result.items)",
+    "TypeName": "Query"
+   },
+   "DependsOn": [
+    "WavelengthAPIRoomsDataSource36EF0642",
+    "WavelengthAPISchemaFF80E3D3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthAPI/QueryGetActiveRooms/Resource"
+   }
+  },
+  "WavelengthPipelineArtifactsBucketB8F8B2C0": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "aws:kms"
+       }
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/ArtifactsBucket/Resource"
+   }
+  },
+  "WavelengthPipelineArtifactsBucketPolicy8584FFD1": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "WavelengthPipelineArtifactsBucketB8F8B2C0"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "WavelengthPipelineArtifactsBucketB8F8B2C0",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "WavelengthPipelineArtifactsBucketB8F8B2C0",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/ArtifactsBucket/Policy/Resource"
+   }
+  },
+  "WavelengthPipelineRole58C4B8B3": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "codepipeline.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/Role/Resource"
+   }
+  },
+  "WavelengthPipelineRoleDefaultPolicy5DAEC93D": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "WavelengthPipelineArtifactsBucketB8F8B2C0",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "WavelengthPipelineArtifactsBucketB8F8B2C0",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "WavelengthPipelineBuildCodePipelineActionRoleC08CF8E2",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WavelengthPipelineRoleDefaultPolicy5DAEC93D",
+    "Roles": [
+     {
+      "Ref": "WavelengthPipelineRole58C4B8B3"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/Role/DefaultPolicy/Resource"
+   }
+  },
+  "WavelengthPipelineF1CF4CAA": {
+   "Type": "AWS::CodePipeline::Pipeline",
+   "Properties": {
+    "ArtifactStore": {
+     "Location": {
+      "Ref": "WavelengthPipelineArtifactsBucketB8F8B2C0"
+     },
+     "Type": "S3"
+    },
+    "Name": "wavelength-pipeline",
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "WavelengthPipelineRole58C4B8B3",
+      "Arn"
+     ]
+    },
+    "Stages": [
+     {
+      "Actions": [
+       {
+        "ActionTypeId": {
+         "Category": "Source",
+         "Owner": "ThirdParty",
+         "Provider": "GitHub",
+         "Version": "1"
+        },
+        "Configuration": {
+         "Owner": "shmurthy08",
+         "Repo": "wavelength",
+         "Branch": "main",
+         "OAuthToken": "{{resolve:secretsmanager:github-token:SecretString:::}}",
+         "PollForSourceChanges": false
+        },
+        "Name": "GitHub_Source",
+        "OutputArtifacts": [
+         {
+          "Name": "Artifact_Source_GitHub_Source"
+         }
+        ],
+        "RunOrder": 1
+       }
+      ],
+      "Name": "Source"
+     },
+     {
+      "Actions": [
+       {
+        "ActionTypeId": {
+         "Category": "Build",
+         "Owner": "AWS",
+         "Provider": "CodeBuild",
+         "Version": "1"
+        },
+        "Configuration": {
+         "ProjectName": {
+          "Ref": "WavelengthBuild67732E9B"
+         }
+        },
+        "InputArtifacts": [
+         {
+          "Name": "Artifact_Source_GitHub_Source"
+         }
+        ],
+        "Name": "Build",
+        "OutputArtifacts": [
+         {
+          "Name": "Artifact_Build_Build"
+         }
+        ],
+        "RoleArn": {
+         "Fn::GetAtt": [
+          "WavelengthPipelineBuildCodePipelineActionRoleC08CF8E2",
+          "Arn"
+         ]
+        },
+        "RunOrder": 1
+       }
+      ],
+      "Name": "Build"
+     }
+    ]
+   },
+   "DependsOn": [
+    "WavelengthPipelineRoleDefaultPolicy5DAEC93D",
+    "WavelengthPipelineRole58C4B8B3"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/Resource"
+   }
+  },
+  "WavelengthPipelineSourceGitHubSourceWebhookResource809C25B8": {
+   "Type": "AWS::CodePipeline::Webhook",
+   "Properties": {
+    "Authentication": "GITHUB_HMAC",
+    "AuthenticationConfiguration": {
+     "SecretToken": "{{resolve:secretsmanager:github-token:SecretString:::}}"
+    },
+    "Filters": [
+     {
+      "JsonPath": "$.ref",
+      "MatchEquals": "refs/heads/{Branch}"
+     }
+    ],
+    "RegisterWithThirdParty": true,
+    "TargetAction": "GitHub_Source",
+    "TargetPipeline": {
+     "Ref": "WavelengthPipelineF1CF4CAA"
+    },
+    "TargetPipelineVersion": 1
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/Source/GitHub_Source/WebhookResource"
+   }
+  },
+  "WavelengthPipelineBuildCodePipelineActionRoleC08CF8E2": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":iam::207567761455:root"
+          ]
+         ]
+        }
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/Build/Build/CodePipelineActionRole/Resource"
+   }
+  },
+  "WavelengthPipelineBuildCodePipelineActionRoleDefaultPolicy0592FB9B": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "codebuild:BatchGetBuilds",
+        "codebuild:StartBuild",
+        "codebuild:StopBuild"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "WavelengthBuild67732E9B",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WavelengthPipelineBuildCodePipelineActionRoleDefaultPolicy0592FB9B",
+    "Roles": [
+     {
+      "Ref": "WavelengthPipelineBuildCodePipelineActionRoleC08CF8E2"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthPipeline/Build/Build/CodePipelineActionRole/DefaultPolicy/Resource"
+   }
+  },
+  "WavelengthBuildRole5C5823DF": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "codebuild.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthBuild/Role/Resource"
+   }
+  },
+  "WavelengthBuildRoleDefaultPolicy047D67B7": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":logs:us-west-1:207567761455:log-group:/aws/codebuild/",
+           {
+            "Ref": "WavelengthBuild67732E9B"
+           }
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":logs:us-west-1:207567761455:log-group:/aws/codebuild/",
+           {
+            "Ref": "WavelengthBuild67732E9B"
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "codebuild:CreateReportGroup",
+        "codebuild:CreateReport",
+        "codebuild:UpdateReport",
+        "codebuild:BatchPutTestCases",
+        "codebuild:BatchPutCodeCoverages"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":codebuild:us-west-1:207567761455:report-group/",
+          {
+           "Ref": "WavelengthBuild67732E9B"
+          },
+          "-*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "WavelengthPipelineArtifactsBucketB8F8B2C0",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "WavelengthPipelineArtifactsBucketB8F8B2C0",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "WavelengthBuildRoleDefaultPolicy047D67B7",
+    "Roles": [
+     {
+      "Ref": "WavelengthBuildRole5C5823DF"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthBuild/Role/DefaultPolicy/Resource"
+   }
+  },
+  "WavelengthBuild67732E9B": {
+   "Type": "AWS::CodeBuild::Project",
+   "Properties": {
+    "Artifacts": {
+     "Type": "CODEPIPELINE"
+    },
+    "Cache": {
+     "Type": "NO_CACHE"
+    },
+    "EncryptionKey": "alias/aws/s3",
+    "Environment": {
+     "ComputeType": "BUILD_GENERAL1_SMALL",
+     "EnvironmentVariables": [
+      {
+       "Name": "NEXT_PUBLIC_AWS_REGION",
+       "Type": "PLAINTEXT",
+       "Value": "us-west-1"
+      },
+      {
+       "Name": "NEXT_PUBLIC_USER_POOL_ID",
+       "Type": "PLAINTEXT",
+       "Value": {
+        "Ref": "WavelengthUserPool6C5E5A64"
+       }
+      },
+      {
+       "Name": "NEXT_PUBLIC_USER_POOL_CLIENT_ID",
+       "Type": "PLAINTEXT",
+       "Value": {
+        "Ref": "WavelengthUserPoolClient0FBC9568"
+       }
+      },
+      {
+       "Name": "NEXT_PUBLIC_APPSYNC_API_URL",
+       "Type": "PLAINTEXT",
+       "Value": {
+        "Fn::GetAtt": [
+         "WavelengthAPI888462B0",
+         "GraphQLUrl"
+        ]
+       }
+      }
+     ],
+     "Image": "aws/codebuild/standard:7.0",
+     "ImagePullCredentialsType": "CODEBUILD",
+     "PrivilegedMode": false,
+     "Type": "LINUX_CONTAINER"
+    },
+    "ServiceRole": {
+     "Fn::GetAtt": [
+      "WavelengthBuildRole5C5823DF",
+      "Arn"
+     ]
+    },
+    "Source": {
+     "BuildSpec": "{\n  \"version\": \"0.2\",\n  \"phases\": {\n    \"install\": {\n      \"commands\": [\n        \"npm ci\"\n      ]\n    },\n    \"build\": {\n      \"commands\": [\n        \"npm run build\",\n        \"npm test\"\n      ]\n    }\n  },\n  \"artifacts\": {\n    \"base-directory\": \"build\",\n    \"files\": [\n      \"**/*\"\n    ]\n  },\n  \"cache\": {\n    \"paths\": [\n      \"node_modules/**/*\"\n    ]\n  }\n}",
+     "Type": "CODEPIPELINE"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/WavelengthBuild/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WPQU+EMBCFf8veuyO7e/CsS+LFRASNR1PKKIXSqbTshjT974YCLp7me28mb/KOcDglkOz41e5F1e6VLMEXjouW8av99IK+tXQE/t1inxEpdv7Sf7zCWUnUbruancCqUfOOqhL8Gy8VTicRAuPG2FEL8E89N/WPejBy2kb1+vxfFaLGjrM0hqVlyh0vaOhFzNuoHC2pC/aTvXJgknfgc5q/x5mRkmKc5EyBCarQSINKagSfLRQvNvyBZU3UBmZP4B8H0WIsvdA8btlbPX8oB6mqW3zWU4MiRiwYQuywVnsZnBnc2mZyA9NUITT27nJM4HAPya6xUu77QTvZIeTz/AWpeIXG1wEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "WavelengthStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "UserPoolId": {
+   "Description": "Cognito User Pool ID",
+   "Value": {
+    "Ref": "WavelengthUserPool6C5E5A64"
+   },
+   "Export": {
+    "Name": "WavelengthUserPoolId"
+   }
+  },
+  "UserPoolClientId": {
+   "Description": "Cognito User Pool Client ID",
+   "Value": {
+    "Ref": "WavelengthUserPoolClient0FBC9568"
+   },
+   "Export": {
+    "Name": "WavelengthUserPoolClientId"
+   }
+  },
+  "GraphQLApiUrl": {
+   "Description": "AppSync GraphQL API URL",
+   "Value": {
+    "Fn::GetAtt": [
+     "WavelengthAPI888462B0",
+     "GraphQLUrl"
+    ]
+   },
+   "Export": {
+    "Name": "WavelengthGraphQLApiUrl"
+   }
+  },
+  "GraphQLApiId": {
+   "Description": "AppSync GraphQL API ID",
+   "Value": {
+    "Fn::GetAtt": [
+     "WavelengthAPI888462B0",
+     "ApiId"
+    ]
+   },
+   "Export": {
+    "Name": "WavelengthGraphQLApiId"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

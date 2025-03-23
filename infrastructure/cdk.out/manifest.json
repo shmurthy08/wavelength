@@ -1,0 +1,285 @@
+{
+  "version": "36.0.0",
+  "artifacts": {
+    "WavelengthStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "WavelengthStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "WavelengthStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://207567761455/us-west-1",
+      "properties": {
+        "templateFile": "WavelengthStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::207567761455:role/cdk-hnb659fds-deploy-role-207567761455-us-west-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::207567761455:role/cdk-hnb659fds-cfn-exec-role-207567761455-us-west-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-207567761455-us-west-1/dec56c2e7f3e073cc41f9c1711194c05f1cdcd543b92aebad3aa3854a7c33f58.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "WavelengthStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::207567761455:role/cdk-hnb659fds-lookup-role-207567761455-us-west-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "WavelengthStack.assets"
+      ],
+      "metadata": {
+        "/WavelengthStack/WavelengthUserPool/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthUserPool6C5E5A64"
+          }
+        ],
+        "/WavelengthStack/WavelengthUserPoolClient/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthUserPoolClient0FBC9568"
+          }
+        ],
+        "/WavelengthStack/RoomsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "RoomsTableA5C1D45B"
+            }
+          }
+        ],
+        "/WavelengthStack/RoomsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "RoomsTableA5C1D45B"
+          }
+        ],
+        "/WavelengthStack/MessagesTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "MessagesTable05B58A27"
+            }
+          }
+        ],
+        "/WavelengthStack/MessagesTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MessagesTable05B58A27"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPI888462B0"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/Schema": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPISchemaFF80E3D3"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/RoomsDataSource/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIRoomsDataSourceServiceRole959D1114"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/RoomsDataSource/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIRoomsDataSourceServiceRoleDefaultPolicy3376E116"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/RoomsDataSource/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIRoomsDataSource36EF0642"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/MessagesDataSource/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIMessagesDataSourceServiceRole866EE502"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/MessagesDataSource/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIMessagesDataSourceServiceRoleDefaultPolicy78F2F28D"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/MessagesDataSource/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIMessagesDataSource1CA62212"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/QueryGetRoomsByInterests/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIQueryGetRoomsByInterestsC1EB8557"
+          }
+        ],
+        "/WavelengthStack/WavelengthAPI/QueryGetActiveRooms/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthAPIQueryGetActiveRooms80E2CAF6"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline": [
+          {
+            "type": "aws:cdk:warning",
+            "data": "V1 pipeline type is implicitly selected when `pipelineType` is not set. If you want to use V2 type, set `PipelineType.V2`. [ack: @aws-cdk/aws-codepipeline:unspecifiedPipelineType]",
+            "trace": [
+              "Annotations.addMessage (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:1608)",
+              "Annotations.addWarningV2 (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\aws-cdk-lib\\core\\lib\\annotations.js:1:825)",
+              "new Pipeline (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\aws-cdk-lib\\aws-codepipeline\\lib\\pipeline.js:1:6321)",
+              "new WavelengthStack (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\lib\\wavelength-stack.ts:142:22)",
+              "Object.<anonymous> (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\bin\\app.ts:7:1)",
+              "Module._compile (node:internal/modules/cjs/loader:1469:14)",
+              "Module.m._compile (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\ts-node\\src\\index.ts:1618:23)",
+              "Module._extensions..js (node:internal/modules/cjs/loader:1548:10)",
+              "Object.require.extensions.<computed> [as .ts] (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\ts-node\\src\\index.ts:1621:12)",
+              "Module.load (node:internal/modules/cjs/loader:1288:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1104:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)",
+              "phase4 (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\ts-node\\src\\bin.ts:649:14)",
+              "bootstrap (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\ts-node\\src\\bin.ts:95:10)",
+              "main (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\ts-node\\src\\bin.ts:55:10)",
+              "Object.<anonymous> (C:\\Users\\Shree Murthy\\Desktop\\Shree Murthy\\Coding\\wavelength\\infrastructure\\node_modules\\ts-node\\src\\bin.ts:800:3)",
+              "Module._compile (node:internal/modules/cjs/loader:1469:14)",
+              "Object.Module._extensions..js (node:internal/modules/cjs/loader:1548:10)",
+              "Module.load (node:internal/modules/cjs/loader:1288:32)",
+              "Function.Module._load (node:internal/modules/cjs/loader:1104:12)",
+              "Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)",
+              "node:internal/main/run_main_module:28:49"
+            ]
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/ArtifactsBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineArtifactsBucketB8F8B2C0"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/ArtifactsBucket/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineArtifactsBucketPolicy8584FFD1"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/Role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineRole58C4B8B3"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/Role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineRoleDefaultPolicy5DAEC93D"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineF1CF4CAA"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/Source/GitHub_Source/WebhookResource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineSourceGitHubSourceWebhookResource809C25B8"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/Build/Build/CodePipelineActionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineBuildCodePipelineActionRoleC08CF8E2"
+          }
+        ],
+        "/WavelengthStack/WavelengthPipeline/Build/Build/CodePipelineActionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthPipelineBuildCodePipelineActionRoleDefaultPolicy0592FB9B"
+          }
+        ],
+        "/WavelengthStack/WavelengthBuild/Role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthBuildRole5C5823DF"
+          }
+        ],
+        "/WavelengthStack/WavelengthBuild/Role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthBuildRoleDefaultPolicy047D67B7"
+          }
+        ],
+        "/WavelengthStack/WavelengthBuild/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WavelengthBuild67732E9B"
+          }
+        ],
+        "/WavelengthStack/UserPoolId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolId"
+          }
+        ],
+        "/WavelengthStack/UserPoolClientId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "UserPoolClientId"
+          }
+        ],
+        "/WavelengthStack/GraphQLApiUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "GraphQLApiUrl"
+          }
+        ],
+        "/WavelengthStack/GraphQLApiId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "GraphQLApiId"
+          }
+        ],
+        "/WavelengthStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/WavelengthStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/WavelengthStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "WavelengthStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  }
+}
