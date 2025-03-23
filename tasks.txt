@@ -1,7 +1,0 @@
-You are a senior frontend software developer. You have been given this project and the details of the project are in the readme.
-
-Your main task is to ensure the divs, spacings, and displays are accurately positioned within the web browser.
-Navbars cover up some text and the components are too high. So please analyze the codebase and ensure proper spacing.
-After this is covered we need proper creation of creating wavelengths, tuning into them (i.e subscribing) which might require caching or storing information to supabase.
-
-At the moment I'm not able to tune into wavelengths and post things. Please ensure this is working by modifying or creating files as needed.
