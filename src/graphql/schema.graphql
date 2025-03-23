@@ -1,0 +1,31 @@
+type Room @model {
+  id: ID!
+  title: String!
+  description: String!
+  createdAt: AWSDateTime!
+  expiresAt: AWSDateTime!
+  interests: [String!]!
+  createdBy: String!
+  participants: [String!]!
+  messages: [Message] @hasMany
+}
+
+type Message @model {
+  id: ID!
+  content: String!
+  createdAt: AWSDateTime!
+  roomId: ID!
+  userId: String!
+  userName: String!
+  room: Room! @belongsTo
+}
+
+type Query {
+  getRoomsByInterests(interests: [String!]!, limit: Int): [Room!]!
+  getActiveRooms(limit: Int): [Room!]!
+}
+
+type Subscription {
+  onCreateMessage(roomId: ID!): Message @aws_subscribe(mutations: ["createMessage"])
+  onUpdateRoom(id: ID!): Room @aws_subscribe(mutations: ["updateRoom"])
+}

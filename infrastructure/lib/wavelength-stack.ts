@@ -162,15 +162,19 @@ export class WavelengthStack extends cdk.Stack {
 
     // Build Stage
     const buildProject = new codebuild.PipelineProject(this, 'WavelengthBuild', {
-      environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
-        environmentVariables: {
-          NEXT_PUBLIC_AWS_REGION: { value: this.region },
-          NEXT_PUBLIC_USER_POOL_ID: { value: userPool.userPoolId },
-          NEXT_PUBLIC_USER_POOL_CLIENT_ID: { value: userPoolClient.userPoolClientId },
-          NEXT_PUBLIC_APPSYNC_API_URL: { value: api.graphqlUrl },
-        },
-      },
+        environment: {
+            buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+            computeType: codebuild.ComputeType.SMALL,
+            privileged: true, // Only if you need Docker
+            environmentVariables: {
+                NEXT_PUBLIC_AWS_REGION: { value: this.region },
+                NEXT_PUBLIC_USER_POOL_ID: { value: userPool.userPoolId },
+                NEXT_PUBLIC_USER_POOL_CLIENT_ID: { value: userPoolClient.userPoolClientId },
+                NEXT_PUBLIC_APPSYNC_API_URL: { value: api.graphqlUrl },
+                // Your env vars here
+                NODE_OPTIONS: { value: "--max-old-space-size=4096" } // Increase memory if needed
+            },
+          },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {

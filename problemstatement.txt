@@ -1,0 +1,86 @@
+LLM-Optimized Development Prompt for Wavelength MVP
+Project Goal
+Develop an MVP (Minimum Viable Product) version of Wavelength - a social media platform that creates interest-based, time-limited conversation rooms. The platform aims to combat social media fatigue by ensuring all content has a natural expiration date, promoting fresh, engaging discussions rather than endless feeds. Rooms expire after a set period (24-72 hours), creating urgency and encouraging active participation.
+Tech Stack
+
+Frontend: React with Next.js, TailwindCSS for styling
+Backend: Node.js with Express
+Database: DynamoDB for scalable NoSQL storage
+Authentication: AWS Cognito for user management
+Real-time Communication: AWS AppSync with GraphQL subscriptions
+Cloud Infrastructure: AWS Serverless (Lambda, API Gateway)
+Development Tools: GitHub Actions for CI/CD
+
+MVP Core Features
+
+User authentication (signup/login)
+Interest-based room creation and discovery
+Time-limited rooms (24, 48, or 72 hours)
+Basic text-based conversations
+Room expiration mechanism
+Interest tagging system
+Mobile-responsive design
+
+Detailed Development Prompt
+I need assistance developing the MVP version of Wavelength, a time-limited social media platform. Here's what I need help with:
+Frontend Development
+Create a React/Next.js application with TailwindCSS featuring:
+
+A clean, minimalist UI that emphasizes conversations and time limits
+Responsive design that works well on both mobile and desktop
+Room cards that prominently display expiration timers and topics
+A simple room creation flow with title, description, interests, and duration
+Real-time chat interface for conversations
+Visual indicators for room lifecycle (fresh, active, expiring soon)
+Navigation between "For You" (personalized), "Discover" (exploration), and "Saved" views
+
+The design should incorporate ephemeral content patterns to create natural urgency without feeling stressful. Use color-coding, progress bars, and countdown timers to clearly communicate room lifecycles.
+Backend Architecture
+Develop a serverless backend using AWS with:
+
+User authentication via Cognito
+DynamoDB tables for:
+
+Users (profiles, interests)
+Rooms (metadata, expiration time)
+Messages (conversation content)
+
+
+Lambda functions for:
+
+User management
+Room creation and lifecycle
+Simple recommendation system based on interest tags
+Message handling
+
+
+TTL mechanism for automatic room expiration
+GraphQL API for real-time messaging
+
+Room Recommendation Logic
+Implement a basic recommendation system that:
+
+Matches users with rooms based on explicit interest tags
+Factors in room popularity (participant count)
+Prioritizes rooms closer to expiration to create urgency
+Includes some diversity to avoid echo chambers
+
+Key Implementation Details
+
+TTL Mechanism: Use DynamoDB's TTL feature to automatically expire rooms
+Room Lifecycle: Create visual states for rooms (fresh, active, expiring soon)
+Interest Matching: Implement tag-based matching between user interests and room topics
+Real-time Updates: Ensure conversation updates appear instantly for all participants
+Mobile Optimization: Ensure thumb-friendly navigation and readable text on small screens
+
+Priority Development Order
+
+Authentication and user profile creation
+Room creation and basic listing
+Expiration mechanism and visual indicators
+Simple chat functionality
+Interest-based recommendation
+UI polish and responsiveness
+
+For the initial release, focus on simplicity and core functionality rather than advanced features. The goal is to test the fundamental concept of time-limited, interest-based social interactions.
+When building each component, prioritize the user experience of time-sensitivity and fresh conversations, as these are the key differentiators from traditional social media platforms.
