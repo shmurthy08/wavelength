@@ -1,10 +1,19 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import AuthComponent from '@/components/Auth/AuthComponent';
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/rooms/for-you');
+    }
+  }, [isAuthenticated, router]);
 
   if (isLoading) {
     return (
@@ -18,12 +27,5 @@ export default function Home() {
     return <AuthComponent />;
   }
 
-  return (
-    <main className="min-h-screen p-4">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Welcome to Wavelength</h1>
-        {/* Room components will be added here */}
-      </div>
-    </main>
-  );
+  return null;
 }

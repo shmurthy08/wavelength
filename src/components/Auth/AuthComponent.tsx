@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Auth } from 'aws-amplify';
+import Auth from '@aws-amplify/auth';
 
 export default function AuthComponent() {
     const [isSignIn, setIsSignIn] = useState(true);
@@ -13,18 +13,23 @@ export default function AuthComponent() {
         
         try {
             if (isSignIn) {
-                await Auth.signIn(email, password);
+                await Auth.signIn({ username: email, password });
             } else {
                 await Auth.signUp({
                     username: email,
                     password,
-                    attributes: {
-                        email,
-                    }
+                    // Note: autoSignIn was removed as it's not supported
                 });
+                
+                // If you need automatic sign-in after signup, you can do it manually
+                await Auth.signIn({ username: email, password });
             }
-        } catch (err) {
-            setError(err.message || 'An error occurred');
+        } catch (error) {
+            if (error instanceof Error) {
+                setError(error.message);
+            } else {
+                setError('An unknown error occurred');
+            }
         }
     };
 
